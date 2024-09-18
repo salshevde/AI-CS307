@@ -2,55 +2,59 @@ import numpy as np
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OrdinalEncoder, LabelEncoder, OneHotEncoder
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score
+
 # ------------- LOAD DATA -------------
-with open('./columns.names','r') as file:
-    columns = [line.strip().split(':')[0] for line in file.readlines() if line.strip().split(':')[0]]
-data = pd.read_csv('./hypothyroid.data',header=None, names = columns)
 
-# ------------- PREPROCESS DATA -------------
-data.replace('?',pd.NA,inplace =True)
-data.ffill(inplace=True)
+data = pd.read_csv(
+    "./new-thyroid.data",
+    header=None,
+    names=[
+        "thyroid",
+        "T3R",
+        "Total Serum Thyroxin",
+        "Total serum triiodothyronine",
+        "	basal thyroid-stimulating hormone (TSH)",
 
-continuous_cols = ['age', 'TSH', 'T3', 'TT4', 'T4U', 'FTI', 'TBG']
+        "Maximal absolute difference of TSH value",
+    ],
+)
 
-# Convert continuous columns to float, handling NaN values
-for col in continuous_cols:
-    data[col] = pd.to_numeric(data[col], errors='coerce')  # Convert to float and coerce errors
 
-data[continuous_cols].fillna(data[continuous_cols].mean(), inplace=True)
-# Convert binary categorical columns to integers
-binary_cols = [
-    'sex', 'on_thyroxine', 'query_on_thyroxine', 'on_antithyroid_medication',
-    'thyroid_surgery', 'query_hypothyroid', 'query_hyperthyroid',
-    'pregnant', 'sick', 'tumor', 'lithium', 'goitre', 'TSH_measured',
-    'T3_measured', 'TT4_measured', 'T4U_measured', 'FTI_measured', 'TBG_measured'
-]
-
-for col in binary_cols:
-    data[col] = data[col].map({'f':0,'t':1})
 # ------------- SPLIT DATA -------------
-X = data.iloc[:,:-1]
-Y = data.iloc[:,-1]
-print(X)
-x_train, x_test, y_train,y_test = train_test_split(X,Y, test_size = 0.3,random_state=30)
+X = data.iloc[:, 1:]
+Y = data.iloc[:, 0]
 
+x_train, x_test, y_train, y_test = train_test_split(
+    X, Y, test_size=0.3, random_state=30
+)
 # ------------- TRAIN MODEL -------------
 
 GNBclassifier = GaussianNB()
-GNBclassifier.fit(x_train,y_train)
+GNBclassifier.fit(x_train, y_train)
 
 
 # ------------- ACCURACY TESTING -------------
-
 y_test_pred = GNBclassifier.predict(x_test)
-print(f"Accuracy of the model: {accuracy_score(y_test,y_test_pred)}%")
+
 print(y_test)
 print(y_test_pred)
+print(f"Accuracy of the model: {accuracy_score(y_test,y_test_pred)*100}%")
 
 # ------------- PREDICT USING MODEL -------------
 
-
-
+prediction_data = input("Input filename for prediction: ")
+x_pred = pd.read_csv(prediction_data,    header=None,
+    names=[
+        "thyroid",
+        "T3R",
+        "Total Serum Thyroxin",
+        "Total serum triiodothyronine",
+        "	basal thyroid-stimulating hormone (TSH)",
+        "Maximal absolute difference of TSH value",
+    ],).drop(["thyroid"],axis=1)
+y_pred = GNBclassifier.predict(x_pred).map({1:"Normal Thyroid Function",2:"Hyperthyroid",3:"Hypothyroid"})
+print(y_pred)
+results = pd.concat([x_pred,pd.DataFrame(y_pred,columns=['THYROID PREDICTION'])],axis=1)
+results.to_csv('predictions.csv',index=False)
