@@ -8,7 +8,6 @@ from sklearn.metrics import accuracy_score
 # ------------- LOAD DATA -------------
 with open('./columns.names','r') as file:
     columns = [line.strip().split(':')[0] for line in file.readlines() if line.strip().split(':')[0]]
-# fix
 data = pd.read_csv('./hypothyroid.data',header=None, names = columns)
 
 # ------------- PREPROCESS DATA -------------
